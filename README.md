@@ -1,0 +1,4 @@
+
+TranscriptToPost is an AI-powered content repurposing tool that transforms transcripts, notes, and raw ideas into SEO-optimized blog articles and podcast scripts instantly. Built for content creators, digital marketers, solo podcasters, and content agencies, it eliminates hours of writing by using Claude AI to generate publish-ready long-form content in seconds.
+Key features include: AI blog post generator with SEO meta tags and proper heading structure, AI podcast script writer with intros, segments, and CTAs, 10-second content generation, 5+ tone styles (casual, professional, educational, entertaining), multilingual support for 30+ languages, and flexible export options including Markdown, plain text, and DOCX.
+Whether you're scaling a content marketing strategy, running a podcast, or managing multiple client blogs, TranscriptToPost is the AI writing tool that turns your raw material into high-quality, audience-ready content — no writing skills required.
