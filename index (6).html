@@ -285,6 +285,22 @@
   }
   .new-btn:hover { background: #f5f5f3; }
 
+  /* HeyGen Embed Card */
+  .heygen-card {
+    background: #fff;
+    border: 1px solid #e5e5e3;
+    border-radius: 14px;
+    padding: 1.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .heygen-card iframe {
+    width: 100%;
+    aspect-ratio: 16/9;
+    border-radius: 10px;
+    border: 1px solid #e5e5e3;
+  }
+
   /* Footer */
   .footer {
     text-align: center;
@@ -426,6 +442,11 @@ Example: 'Hey everyone, welcome back to the channel. Today we are talking about 
     <div class="meta-row"><span class="meta-key">Meta desc</span><span class="meta-val" id="metaDesc"></span></div>
     <div class="meta-row"><span class="meta-key">Keyword</span><span class="meta-val" id="metaKw"></span></div>
     <div class="meta-row"><span class="meta-key">URL slug</span><span class="meta-val" id="metaSlug"></span></div>
+  </div>
+
+  <!-- HeyGen Video Embed -->
+  <div class="heygen-card">
+    <iframe src="https://embed.liveavatar.com/v1/1c9c0e59-1d80-4392-bacc-51ed45346ca4?orientation=horizontal" allow="microphone" title="HeyGen Embed"></iframe>
   </div>
 
   <button class="new-btn" id="newBtn" style="display:none;" onclick="resetAll()">+ New conversion</button>
