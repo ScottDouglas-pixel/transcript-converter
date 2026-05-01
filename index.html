@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TranscriptToPost — Turn any transcript into a blog post</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f7f7f5;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .container { max-width: 760px; margin: 0 auto; }
+
+  .header { text-align: center; margin-bottom: 2.5rem; }
+  .logo { font-size: 26px; font-weight: 600; color: #1a1a1a; letter-spacing: -0.5px; }
+  .logo span { color: #1a7a55; }
+  .tagline { font-size: 15px; color: #666; margin-top: 6px; }
+
+ 
+
+  /* Usage bar */
+  .usage-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #fff; border: 1px solid #e5e5e3; border-radius: 10px;
+    padding: 10px 16px; margin-bottom: 1.25rem; font-size: 13px;
+  }
+  .usage-left { color: #555; }
+  .usage-count { font-weight: 600; color: #1a1a1a; }
+  .upgrade-link {
+    color: #1a7a55; font-size: 12px; text-decoration: underline;
+    cursor: pointer; background: none; border: none; font-family: inherit;
+  }
+  .upgrade-link:hover { color: #145e41; }
+
+  /* Main card */
+  .card {
+    background: #fff; border: 1px solid #e5e5e3; border-radius: 14px;
+    padding: 1.75rem; margin-bottom: 1.25rem;
+  }
+  .form-label {
+    display: block; font-size: 12px; font-weight: 600; color: #888;
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 7px;
+  }
+  textarea {
+    width: 100%; min-height: 180px; resize: vertical; border: 1px solid #ddd;
+    border-radius: 8px; padding: 12px 14px; font-size: 14px; line-height: 1.65;
+    color: #1a1a1a; background: #fafaf9; font-family: inherit;
+    transition: border-color 0.15s; margin-bottom: 1.25rem;
+  }
+  textarea:focus { outline: none; border-color: #1a7a55; background: #fff; }
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 1.25rem; }
+  select {
+    width: 100%; height: 38px; padding: 0 10px; border: 1px solid #ddd;
+    border-radius: 8px; font-size: 13px; color: #1a1a1a; background: #fafaf9;
+    font-family: inherit; cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+  }
+  select:focus { outline: none; border-color: #1a7a55; }
+  .convert-btn {
+    width: 100%; padding: 13px; background: #1a1a1a; color: #fff; border: none;
+    border-radius: 9px; font-size: 15px; font-weight: 600; cursor: pointer;
+    font-family: inherit; letter-spacing: -0.1px; transition: background 0.15s, transform 0.1s;
+  }
+  .convert-btn:hover { background: #333; }
+  .convert-btn:active { transform: scale(0.99); }
+  .convert-btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+  .status { text-align: center; padding: 1rem; font-size: 14px; color: #666; display: none; }
+  .spinner {
+    display: inline-block; width: 16px; height: 16px; border: 2px solid #ddd;
+    border-top-color: #1a7a55; border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .output-card {
+    background: #fff; border: 1px solid #e5e5e3; border-radius: 14px;
+    padding: 1.75rem; margin-bottom: 1.25rem; display: none;
+  }
+  .output-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .output-title { font-size: 13px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.06em; }
+  .btn-row { display: flex; gap: 8px; }
+  .sm-btn {
+    padding: 5px 13px; font-size: 12px; border: 1px solid #ddd; border-radius: 6px;
+    background: transparent; color: #555; cursor: pointer; font-family: inherit; transition: background 0.1s;
+  }
+  .sm-btn:hover { background: #f5f5f3; }
+  .output-box {
+    background: #fafaf9; border: 1px solid #e5e5e3; border-radius: 8px;
+    padding: 1.25rem 1.5rem; font-size: 14px; line-height: 1.85; color: #1a1a1a;
+    white-space: pre-wrap; min-height: 180px;
+  }
+
+  .meta-card {
+    background: #fff; border: 1px solid #e5e5e3; border-radius: 14px;
+    padding: 1.25rem 1.75rem; margin-bottom: 1.25rem; display: none;
+  }
+  .meta-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: .75rem; }
+  .meta-row { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #f0f0ee; }
+  .meta-row:last-child { border-bottom: none; }
+  .meta-key { font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; width: 120px; flex-shrink: 0; padding-top: 2px; }
+  .meta-val { font-size: 13px; color: #1a1a1a; line-height: 1.55; }
+
+  .new-btn {
+    width: 100%; padding: 10px; background: transparent; color: #555;
+    border: 1px solid #ddd; border-radius: 9px; font-size: 14px;
+    cursor: pointer; font-family: inherit; transition: background 0.1s;
+  }
+  .new-btn:hover { background: #f5f5f3; }
+
+  .footer {
+    text-align: center; font-size: 12px; color: #bbb;
+    margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee;
+  }
+  .footer a { color: #bbb; }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 100; align-items: center; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal { background: #fff; border-radius: 14px; padding: 2rem; max-width: 420px; width: 90%; text-align: center; }
+  .modal h2 { font-size: 20px; margin-bottom: 8px; }
+  .modal p { font-size: 14px; color: #666; line-height: 1.6; margin-bottom: 1.5rem; }
+  .modal-btn {
+    display: block; width: 100%; padding: 12px; background: #1a7a55; color: #fff;
+    border: none; border-radius: 9px; font-size: 15px; font-weight: 600;
+    cursor: pointer; font-family: inherit; text-decoration: none; margin-bottom: 10px;
+  }
+  .modal-btn:hover { background: #145e41; }
+  .modal-close { font-size: 13px; color: #aaa; cursor: pointer; background: none; border: none; font-family: inherit; }
+  .modal-close:hover { color: #555; }
+
+  @media (max-width: 560px) {
+    .options-grid { grid-template-columns: 1fr; }
+    .btn-row { flex-wrap: wrap; }
+  }
+
+  /* =============================================
+     AI CHAT WIDGET
+     ============================================= */
+  #chat-bubble {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    background: #1a7a55;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 999;
+    box-shadow: 0 4px 16px rgba(26,122,85,0.35);
+    transition: transform 0.2s, background 0.2s;
+    border: none;
+  }
+  #chat-bubble:hover { background: #145e41; transform: scale(1.06); }
+  #chat-bubble svg { width: 26px; height: 26px; }
+
+  #chat-badge {
+    position: absolute;
+    top: -2px; right: -2px;
+    background: #e05a2b;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid #f7f7f5;
+  }
+
+  #chat-window {
+    position: fixed;
+    bottom: 92px;
+    right: 24px;
+    width: 340px;
+    max-height: 520px;
+    background: #fff;
+    border: 1px solid #e5e5e3;
+    border-radius: 16px;
+    display: none;
+    flex-direction: column;
+    z-index: 998;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.13);
+    overflow: hidden;
+  }
+  #chat-window.open { display: flex; }
+
+  #chat-header {
+    background: #1a7a55;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .chat-avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .chat-header-info { flex: 1; }
+  .chat-name { font-size: 14px; font-weight: 600; color: #fff; }
+  .chat-status { font-size: 11px; color: rgba(255,255,255,0.75); margin-top: 1px; }
+  #chat-close {
+    background: none; border: none; color: rgba(255,255,255,0.75);
+    cursor: pointer; font-size: 20px; line-height: 1; padding: 0 2px;
+  }
+  #chat-close:hover { color: #fff; }
+
+  #chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 14px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scroll-behavior: smooth;
+  }
+
+  .msg {
+    max-width: 85%;
+    font-size: 13px;
+    line-height: 1.55;
+    padding: 9px 12px;
+    border-radius: 12px;
+    animation: fadeUp 0.2s ease;
+  }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .msg-bot {
+    background: #f0f0ee;
+    color: #1a1a1a;
+    border-bottom-left-radius: 4px;
+    align-self: flex-start;
+  }
+  .msg-user {
+    background: #1a7a55;
+    color: #fff;
+    border-bottom-right-radius: 4px;
+    align-self: flex-end;
+  }
+  .msg-typing {
+    background: #f0f0ee;
+    align-self: flex-start;
+    padding: 12px 16px;
+    border-bottom-left-radius: 4px;
+  }
+  .typing-dots { display: flex; gap: 4px; align-items: center; }
+  .typing-dots span {
+    width: 7px; height: 7px; background: #aaa; border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-5px); } }
+
+  #chat-suggestions {
+    padding: 0 14px 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .suggestion {
+    font-size: 11px;
+    padding: 5px 10px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    background: #fafaf9;
+    color: #555;
+    cursor: pointer;
+    transition: background 0.1s;
+    white-space: nowrap;
+  }
+  .suggestion:hover { background: #f0f0ee; border-color: #1a7a55; color: #1a7a55; }
+
+  #chat-input-row {
+    padding: 10px 12px;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  #chat-input {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px 11px;
+    font-size: 13px;
+    font-family: inherit;
+    color: #1a1a1a;
+    background: #fafaf9;
+    outline: none;
+    resize: none;
+    height: 36px;
+    line-height: 1.4;
+  }
+  #chat-input:focus { border-color: #1a7a55; background: #fff; }
+  #chat-send {
+    width: 36px; height: 36px; flex-shrink: 0;
+    background: #1a7a55; border: none; border-radius: 8px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  #chat-send:hover { background: #145e41; }
+  #chat-send:disabled { background: #ccc; cursor: not-allowed; }
+  #chat-send svg { width: 16px; height: 16px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <div class="logo">Transcript<span>ToPost</span></div>
+    <p class="tagline">Paste any YouTube or podcast transcript — get a clean, SEO-ready blog post in seconds.</p>
+  </div>
+
+  <!-- EXPLAINER VIDEO — upload TranscriptToPost_Explainer_Video_1080p.mp4 to your
+       GitHub repo first, then the src URL below should work automatically -->
+  <div class="video-section">
+    <div class="video-label">Watch how it works — 60 seconds</div>
+    <div class="video-wrapper">
+      <video controls preload="metadata" aria-label="TranscriptToPost explainer video">
+        <source src="https://raw.githubusercontent.com/ScottDouglas-pixel/Transcript-Convert/main/TranscriptToPost_Explainer_Video_1080p.mp4" type="video/mp4">
+        Your browser does not support video playback.
+      </video>
+    </div>
+    <p class="video-caption">See how a raw transcript becomes a published blog post in 15 seconds</p>
+  </div>
+
+  <div class="usage-bar">
+    <span class="usage-left">Free conversions today: <span class="usage-count" id="usesLeft">3 remaining</span></span>
+    <button class="upgrade-link" onclick="showModal()">Upgrade to unlimited &rarr;</button>
+  </div>
+
+  <div class="card">
+    <label class="form-label" for="transcript">Paste your transcript</label>
+    <textarea id="transcript" placeholder="Paste your YouTube auto-captions, podcast transcript, or any raw spoken content here...
+
+Example: 'Hey everyone, welcome back to the channel. Today we are talking about sleep debt and why it is actually damaging your brain. Scientists now have MRI scans that prove...'"></textarea>
+
+    <div class="options-grid">
+      <div>
+        <label class="form-label" for="tone">Tone</label>
+        <select id="tone">
+          <option value="educational">Educational</option>
+          <option value="conversational">Conversational</option>
+          <option value="professional">Professional</option>
+          <option value="storytelling">Storytelling</option>
+          <option value="listicle-style">Listicle style</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label" for="ctype">Content type</label>
+        <select id="ctype">
+          <option value="YouTube video">YouTube video</option>
+          <option value="podcast episode">Podcast episode</option>
+          <option value="interview">Interview</option>
+          <option value="webinar">Webinar</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label" for="length">Post length</label>
+        <select id="length">
+          <option value="medium (600-900 words)">Medium (600-900w)</option>
+          <option value="short (300-500 words)">Short (300-500w)</option>
+          <option value="long (1200-1500 words)">Long (1200-1500w)</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="convert-btn" id="convertBtn" onclick="convert()">Convert to blog post</button>
+  </div>
+
+  <div class="status" id="status">
+    <span class="spinner"></span> Converting your transcript... this takes about 15 seconds.
+  </div>
+
+  <div class="output-card" id="outputCard">
+    <div class="output-header">
+      <span class="output-title">Your blog post</span>
+      <div class="btn-row">
+        <button class="sm-btn" onclick="copyPost()">Copy post</button>
+        <button class="sm-btn" onclick="downloadPost()">Download .txt</button>
+      </div>
+    </div>
+    <div class="output-box" id="outputBox"></div>
+  </div>
+
+  <div class="meta-card" id="metaCard">
+    <div class="meta-title-row">
+      <span class="output-title">SEO meta</span>
+      <button class="sm-btn" onclick="copyMeta()">Copy meta</button>
+    </div>
+    <div class="meta-row"><span class="meta-key">Title tag</span><span class="meta-val" id="metaTitle"></span></div>
+    <div class="meta-row"><span class="meta-key">Meta desc</span><span class="meta-val" id="metaDesc"></span></div>
+    <div class="meta-row"><span class="meta-key">Keyword</span><span class="meta-val" id="metaKw"></span></div>
+    <div class="meta-row"><span class="meta-key">URL slug</span><span class="meta-val" id="metaSlug"></span></div>
+  </div>
+
+  <button class="new-btn" id="newBtn" style="display:none;" onclick="resetAll()">+ New conversion</button>
+
+  <div class="footer">
+    &copy; 2026 TranscriptToPost &nbsp;&middot;&nbsp; <a href="#">Privacy</a> &nbsp;&middot;&nbsp; <a href="#">Terms</a>
+  </div>
+
+</div>
+
+<!-- Upgrade modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <h2>Upgrade to Creator</h2>
+    <p>Get unlimited conversions, 5 tone styles, SEO meta generation, and clean downloads — all for $12/month. Cancel any time.</p>
+    <a class="modal-btn" href="YOUR_STRIPE_PAYMENT_LINK_HERE" target="_blank">Get unlimited access &rarr;</a>
+    <button class="modal-close" onclick="closeModal()">No thanks, I'll stick with 3/day</button>
+  </div>
+</div>
+
+<!-- =============================================
+     AI CHAT WIDGET
+     ============================================= -->
+<button id="chat-bubble" onclick="toggleChat()" aria-label="Chat with our AI assistant">
+  <span id="chat-badge">1</span>
+  <svg viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M13 2C7.477 2 3 6.03 3 11c0 2.38 1.01 4.54 2.65 6.13L4.5 21.5l4.72-1.57A10.7 10.7 0 0013 20c5.523 0 10-4.03 10-9s-4.477-9-10-9z" fill="white"/>
+  </svg>
+</button>
+
+<div id="chat-window">
+  <div id="chat-header">
+    <div class="chat-avatar">🧙</div>
+    <div class="chat-header-info">
+      <div class="chat-name">TranscriptToPost Assistant</div>
+      <div class="chat-status">● Online — ask me anything</div>
+    </div>
+    <button id="chat-close" onclick="toggleChat()" aria-label="Close chat">&times;</button>
+  </div>
+
+  <div id="chat-messages"></div>
+
+  <div id="chat-suggestions">
+    <button class="suggestion" onclick="sendSuggestion('How does it work?')">How does it work?</button>
+    <button class="suggestion" onclick="sendSuggestion('How much does it cost?')">How much does it cost?</button>
+    <button class="suggestion" onclick="sendSuggestion('Who is this for?')">Who is this for?</button>
+    <button class="suggestion" onclick="sendSuggestion('How is this different from ChatGPT?')">vs ChatGPT?</button>
+  </div>
+
+  <div id="chat-input-row">
+    <input
+      type="text"
+      id="chat-input"
+      placeholder="Ask me anything..."
+      onkeydown="if(event.key==='Enter') sendMessage()"
+      autocomplete="off"
+    />
+    <button id="chat-send" onclick="sendMessage()" aria-label="Send message">
+      <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M14.5 8L2 2.5l2.5 5.5-2.5 5.5L14.5 8z" fill="white"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+  /* ── Transcript converter ── */
+  let usesLeft = parseInt(localStorage.getItem('ttp_uses') || '3');
+  let blogText = '';
+  let metaRaw = '';
+
+  function updateUsesDisplay() {
+    document.getElementById('usesLeft').textContent = usesLeft + ' remaining';
+  }
+  updateUsesDisplay();
+
+  async function convert() {
+    const transcript = document.getElementById('transcript').value.trim();
+    if (!transcript) { alert('Please paste a transcript first.'); return; }
+    if (transcript.length < 80) { alert('That transcript looks too short. Paste at least a few sentences of real content.'); return; }
+    if (usesLeft <= 0) { showModal(); return; }
+
+    const tone   = document.getElementById('tone').value;
+    const ctype  = document.getElementById('ctype').value;
+    const length = document.getElementById('length').value;
+
+    document.getElementById('convertBtn').disabled = true;
+    document.getElementById('status').style.display = 'block';
+    document.getElementById('outputCard').style.display = 'none';
+    document.getElementById('metaCard').style.display = 'none';
+    document.getElementById('newBtn').style.display = 'none';
+
+    const prompt = `You are an expert content writer who specialises in converting spoken transcripts into polished, engaging blog posts.
+
+Convert the following ${ctype} transcript into a ${length} blog post with a ${tone} tone.
+
+TRANSCRIPT:
+${transcript}
+
+INSTRUCTIONS:
+- Write a compelling H1 title at the top
+- Add an engaging intro hook (2-3 sentences)
+- Write 3-5 body sections with H2 subheadings
+- End with a conclusion that includes a call to action
+- Remove all filler words, false starts, "ums", repetition, and spoken quirks
+- Make it read as natural written content, not a spoken transcript
+- Add genuine value by tightening and enriching the argument
+
+OUTPUT FORMAT — respond with exactly this structure, no extra commentary before or after:
+
+BLOG POST:
+[full blog post here]
+
+---SEO META---
+TITLE TAG: [55-60 character SEO title]
+META DESCRIPTION: [150-160 character meta description including primary keyword]
+FOCUS KEYWORD: [single best keyword phrase]
+SLUG: [url-friendly-slug-here]`;
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error?.message || 'API error');
+
+      const raw = data.content?.[0]?.text || '';
+      const blogMatch = raw.match(/BLOG POST:\s*([\s\S]*?)(?=---SEO META---|$)/i);
+      const metaMatch = raw.match(/---SEO META---\s*([\s\S]*?)$/i);
+
+      blogText = blogMatch ? blogMatch[1].trim() : raw.trim();
+      document.getElementById('outputBox').textContent = blogText;
+      document.getElementById('outputCard').style.display = 'block';
+
+      if (metaMatch) {
+        metaRaw = metaMatch[1].trim();
+        const get = (key) => {
+          const m = metaRaw.match(new RegExp(key + ':\\s*(.+)', 'i'));
+          return m ? m[1].trim() : '';
+        };
+        document.getElementById('metaTitle').textContent = get('TITLE TAG');
+        document.getElementById('metaDesc').textContent  = get('META DESCRIPTION');
+        document.getElementById('metaKw').textContent    = get('FOCUS KEYWORD');
+        document.getElementById('metaSlug').textContent  = get('SLUG');
+        document.getElementById('metaCard').style.display = 'block';
+      }
+
+      document.getElementById('newBtn').style.display = 'block';
+      usesLeft = Math.max(0, usesLeft - 1);
+      localStorage.setItem('ttp_uses', usesLeft);
+      updateUsesDisplay();
+
+    } catch (err) {
+      console.error(err);
+      alert('Something went wrong: ' + err.message + '\n\nMake sure you have added your Anthropic API key to the code.');
+    } finally {
+      document.getElementById('convertBtn').disabled = false;
+      document.getElementById('status').style.display = 'none';
+    }
+  }
+
+  function copyPost() {
+    navigator.clipboard.writeText(blogText).then(() => {
+      const btn = event.target; btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy post', 2000);
+    });
+  }
+  function copyMeta() {
+    navigator.clipboard.writeText(metaRaw).then(() => {
+      const btn = event.target; btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy meta', 2000);
+    });
+  }
+  function downloadPost() {
+    const blob = new Blob([blogText], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'blog-post.txt'; a.click();
+  }
+  function resetAll() {
+    document.getElementById('transcript').value = '';
+    document.getElementById('outputCard').style.display = 'none';
+    document.getElementById('metaCard').style.display = 'none';
+    document.getElementById('newBtn').style.display = 'none';
+    blogText = ''; metaRaw = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function showModal() { document.getElementById('modalOverlay').classList.add('show'); }
+  function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+  function closeModalOutside(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
+
+  const lastReset = localStorage.getItem('ttp_reset_date');
+  const today = new Date().toDateString();
+  if (lastReset !== today) {
+    localStorage.setItem('ttp_uses', '3');
+    localStorage.setItem('ttp_reset_date', today);
+    usesLeft = 3; updateUsesDisplay();
+  }
+
+  /* ── AI Chat Widget ── */
+  const CHAT_SYSTEM = `You are a warm, helpful assistant for TranscriptToPost.com — a tool that converts YouTube and podcast transcripts into polished, SEO-ready blog posts in about 15 seconds.
+
+Your personality: friendly, upbeat, knowledgeable. You are like a wise, experienced guide who has helped hundreds of creators. Keep answers concise — 2-4 sentences unless the person needs more detail. Always end responses with a gentle nudge toward trying the free tool.
+
+ABOUT THE PRODUCT:
+- TranscriptToPost.com converts any transcript (YouTube captions, podcast, webinar, interview) into a full blog post
+- Takes about 15 seconds
+- Outputs: H1 title, subheadings, intro hook, body sections, conclusion with CTA
+- Also outputs full SEO meta: title tag (55-60 chars), meta description (150-160 chars), focus keyword, URL slug
+- Tone options: Educational, Conversational, Professional, Storytelling, Listicle style
+- Content types: YouTube video, Podcast episode, Interview, Webinar
+- Post lengths: Short (300-500w), Medium (600-900w), Long (1200-1500w)
+- Strips all filler words, ums, spoken quirks — output reads like written content
+- Free: 3 conversions per day, no account needed
+- Paid (Creator plan): $12/month, unlimited conversions, cancel anytime
+
+FAQ ANSWERS TO USE:
+Q: How does it work?
+A: Paste your transcript into the box, choose your tone and length, click Convert. Done in 15 seconds.
+
+Q: What transcripts can I use?
+A: YouTube auto-captions, podcast transcripts, webinar recordings, interviews, course lessons, voice memos.
+
+Q: Is it free?
+A: Yes — 3 free conversions every day, no signup, no credit card. Unlimited is $12/month.
+
+Q: Who is it for?
+A: YouTubers, podcasters, course creators, coaches, consultants, webinar hosts — anyone who speaks their content and wants it found on Google.
+
+Q: Does it sound like me?
+A: Yes — it uses your words and ideas, just cleaned up. No generic AI voice.
+
+Q: How is it different from ChatGPT?
+A: ChatGPT is general purpose — you have to know how to prompt it. TranscriptToPost is purpose-built for this one workflow: transcript in, blog post out, SEO meta included, one click.
+
+Q: What about Descript or Otter?
+A: Those transcribe audio to text. TranscriptToPost does the next step — text to published blog post.
+
+Q: Is my transcript stored?
+A: No — it's processed to make your post and not stored or used for anything else.
+
+IMPORTANT: Never make up features that don't exist. If unsure, say "that's a great question — try the free version and see for yourself!" Always be warm and encouraging.`;
+
+  let chatHistory = [];
+  let chatOpen = false;
+  let badgeShown = true;
+
+  function toggleChat() {
+    chatOpen = !chatOpen;
+    const win = document.getElementById('chat-window');
+    if (chatOpen) {
+      win.classList.add('open');
+      document.getElementById('chat-badge').style.display = 'none';
+      badgeShown = false;
+      if (chatHistory.length === 0) showWelcome();
+      setTimeout(() => document.getElementById('chat-input').focus(), 100);
+    } else {
+      win.classList.remove('open');
+    }
+  }
+
+  function showWelcome() {
+    addBotMessage("Hey there! 👋 I'm the TranscriptToPost assistant. Got a question about how the tool works, pricing, or whether it's right for you? Ask away — or tap one of the quick questions below!");
+  }
+
+  function addBotMessage(text) {
+    const msgs = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = 'msg msg-bot';
+    div.textContent = text;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function addUserMessage(text) {
+    const msgs = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = 'msg msg-user';
+    div.textContent = text;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function showTyping() {
+    const msgs = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = 'msg msg-typing'; div.id = 'typing-indicator';
+    div.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function hideTyping() {
+    const el = document.getElementById('typing-indicator');
+    if (el) el.remove();
+  }
+
+  function sendSuggestion(text) {
+    document.getElementById('chat-suggestions').style.display = 'none';
+    document.getElementById('chat-input').value = text;
+    sendMessage();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    document.getElementById('chat-send').disabled = true;
+    document.getElementById('chat-suggestions').style.display = 'none';
+
+    addUserMessage(text);
+    chatHistory.push({ role: 'user', content: text });
+
+    showTyping();
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 300,
+          system: CHAT_SYSTEM,
+          messages: chatHistory
+        })
+      });
+
+      const data = await response.json();
+      hideTyping();
+
+      if (!response.ok) throw new Error(data.error?.message || 'API error');
+
+      const reply = data.content?.[0]?.text || "I'm not sure about that — try the free tool and see for yourself!";
+      chatHistory.push({ role: 'assistant', content: reply });
+      addBotMessage(reply);
+
+    } catch (err) {
+      hideTyping();
+      addBotMessage("Hmm, something went wrong on my end. Try refreshing the page — and don't forget your 3 free conversions are waiting!");
+      console.error(err);
+    } finally {
+      document.getElementById('chat-send').disabled = false;
+      document.getElementById('chat-input').focus();
+    }
+  }
+</script>
+
+</body>
+</html>
